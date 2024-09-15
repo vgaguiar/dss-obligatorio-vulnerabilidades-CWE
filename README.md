@@ -36,7 +36,53 @@ En la práctica, abordaremos las siguientes vulnerabilidades:
 
 ### 7. 🚫 Missing Authorization
 - **Descripción:** Los usuarios autenticados pueden acceder a información de cuentas que no les pertenecen.
-- **Solución:** Implementación de controles de autorización para verificar que el usuario tiene los permisos adecuados.
+#### **Desarrollo de la Vulnerabilidad**
+
+**Problema Original:**
+
+Antes de implementar la corrección, la funcionalidad de visualización de cuentas en AltoroJ permitía que cualquier usuario autenticado accediera al historial de transacciones de cuentas que no le pertenecían. Esto se debía a la falta de validación de la propiedad de la cuenta por parte del usuario autenticado.
+
+Por ejemplo, un usuario malintencionado podía modificar el parámetro `acctId` en la URL de la página `balance.jsp` para acceder a los detalles de cualquier cuenta, lo cual representa una violación crítica de la privacidad y una falta de control de acceso en el sistema.
+
+**Solución Aplicada:**
+
+Para mitigar esta vulnerabilidad, se implementaron controles adicionales en el servlet encargado de manejar la visualización de cuentas. Ahora, cuando un usuario solicita ver el balance de una cuenta, el sistema verifica si el usuario autenticado es el propietario legítimo de la cuenta antes de permitir el acceso a la información. Esto se logra con la siguiente lógica:
+
+```java
+// Obtain the authenticated user from the session
+User authenticatedUser = (User) request.getSession().getAttribute("user");
+if (authenticatedUser == null) {
+    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not authenticated.");
+    return;
+}
+
+// Verify if the account belongs to the authenticated user
+if (!isAccountOwnedByUser(authenticatedUser, Long.parseLong(accountName))) {
+    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized to access this account.");
+    return;
+}```
+
+Además, se implementó el método `isAccountOwnedByUser` para confirmar la propiedad de la cuenta:
+
+```java
+private boolean isAccountOwnedByUser(User user, Long accountId) {
+    Account[] accounts = user.getAccounts();
+    if (accounts != null) {
+        for (Account account : accounts) {
+            if (account.getAccountId() == accountId) {
+                return true;  // The user owns the account
+            }
+        }
+    }
+    return false;  // The user does not own the account
+}```
+![image](https://github.com/user-attachments/assets/77eaf8d8-3be8-49e5-b414-9300be89cd8c)
+![image](https://github.com/user-attachments/assets/c342fcb3-05aa-45a3-ad39-18df3f5ac21a)
+
+Con estos cambios, se garantiza que un usuario solo pueda acceder a la información de las cuentas que le pertenecen, mitigando el riesgo de acceso no autorizado.
+
+![image](https://github.com/user-attachments/assets/3c079033-8368-44d8-8195-b08ee63f87aa)
+
 
 ### 8. 🔓 Missing Authentication for Critical Function
 - **Descripción:** Existe una API que permite obtener el saldo de una cuenta sin necesidad de autenticación.
