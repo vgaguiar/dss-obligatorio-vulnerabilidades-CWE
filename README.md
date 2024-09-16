@@ -123,6 +123,58 @@ Para mitigar esta vulnerabilidad, se implementaron controles adicionales especí
 	        %>
 ```
 
+Vulnerabilidades(1-3)
+
+Vulnerabilidad 1 - Cross Site Scripting
+PoC
+1-Se ingresa a la maquina virtual
+2-Levantar el servicio de Altoro desde Eclipse
+3- Ingreso en  http://localhost:8080/AltoroJ/  
+4- Ingresamos al parametro query de a url search.jsp http://localhost:8080/AltoroJ/search.jsp?query=
+5- Nos damos cuenta de que al estar el parámetro query al descubierto en la URL, podemos ejecutar, por ejemplo, un script. Para explotar la vulnerabilidad, podemos cargar este script con código malicioso.
+Un ejemplo de un script básico que lance una alerta es el siguiente.
+<script> alert('Esta alerta se va a ejecutar')</script>
+
+Mitigación de la vulnerabilidad:
+
+Debemos sanitizar el parámetro query para que así no se pueda ejecutar nada dentro de él.
+ 
+
+
+Vulnerabilidad 2 – SQL Injection
+PoC
+1- Se ingresa a la máquina virtual
+2- Levantar el servicio de Altoro desde Eclipse
+3- Ingreso en http://localhost:8080/AltoroJ/
+4-Ingreso a la url del formulario de login: http://localhost:8080/AltoroJ/login.jsp
+5- Como vemos, podemos escribir cualquier tipo de carácter en el formulario, por lo que debemos manipular la consulta SQL para que siempre sea verdadera y así podamos loguearnos de forma satisfactoria.
+Un ejemplo de cómo podríamos realizar esto es si en el campo de usuario y contraseña escribimos lo siguiente: ' OR '1'='1.
+Si nos damos cuenta, esta consulta siempre será verdadera. La consulta que Altoro le hace a la base de datos sería algo como esto:
+
+SELECT * FROM usuarios WHERE usuario = 'input' AND contraseña = 'input';
+Al manipular los datos, la consulta se vería así:
+SELECT * FROM usuarios WHERE usuario = ' ' or '1'='1' AND contraseña = ' ' or '1'='1';
+Como tenemos un OR en los dos parámetros, siempre que se cumpla una de las dos condiciones, esto será verdadero, y ' 1'='1' siempre será verdadero.
+
+Mitigación de la vulnerabilidad:
+
+Debemos hacer una función que básicamente verifique si el usuario está escribiendo alguno de los caracteres que no deben ser permitidos. Si encontramos algún carácter no permitido en el input de login, devolvemos false, mostrando una alerta al usuario que le indique que debe escribir un nombre de usuario o una contraseña válidos (que no contengan caracteres inválidos).
+ 
+
+Vulnerabilidad 3 – Improper Input Validation:
+PoC
+1- Se ingresa a la máquina virtual
+2- Levantar el servicio de Altoro desde Eclipse
+3- Ingreso en http://localhost:8080/AltoroJ/
+4-Ingreso a http://localhost:8080/AltoroJ/bank/showAccount?listAccounts=800002 , 
+Allí podemos ver que el parámetro accounts es editable en la URL, por lo que simplemente podemos cambiar el número de cuenta y acceder a la cuenta de cualquier otro usuario.
+Mitigación de la vulnerabilidad:
+Lo que debemos hacer es validar que el usuario actual tenga las cuentas que tiene asignadas. Para ello, en AccountViewServlet, en el método doGet, accedemos al usuario actual e iteramos sobre la lista de cuentas asociadas a él. Si la cuenta a la que quiere acceder es una de las cuentas asociadas, entonces está en una cuenta autorizada; de lo contrario, la cuenta a la que quiere acceder no es una cuenta autorizada, por lo que hacemos que el servidor responda con un error al usuario.
+
+ 
+ 
+![image](https://github.com/user-attachments/assets/6b596c10-bde4-4350-825f-01e312b982b9)
+
 (Vulnerabilidad 4 & 5)
 ![image](https://github.com/user-attachments/assets/306d88c8-f1b1-467e-b739-91e7cfa958a6)
 
