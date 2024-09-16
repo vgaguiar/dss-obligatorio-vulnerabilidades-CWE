@@ -127,6 +127,7 @@ Vulnerabilidades(1-3)
 
 Vulnerabilidad 1 - Cross Site Scripting
 PoC
+
 1-Se ingresa a la maquina virtual
 2-Levantar el servicio de Altoro desde Eclipse
 3- Ingreso en  http://localhost:8080/AltoroJ/  
@@ -139,10 +140,12 @@ Mitigación de la vulnerabilidad:
 
 Debemos sanitizar el parámetro query para que así no se pueda ejecutar nada dentro de él.
  
+<img width="442" alt="image" src="https://github.com/user-attachments/assets/de4b9f83-d0fc-4845-9dce-79cac857ccde">
 
 
 Vulnerabilidad 2 – SQL Injection
 PoC
+
 1- Se ingresa a la máquina virtual
 2- Levantar el servicio de Altoro desde Eclipse
 3- Ingreso en http://localhost:8080/AltoroJ/
@@ -160,6 +163,7 @@ Mitigación de la vulnerabilidad:
 
 Debemos hacer una función que básicamente verifique si el usuario está escribiendo alguno de los caracteres que no deben ser permitidos. Si encontramos algún carácter no permitido en el input de login, devolvemos false, mostrando una alerta al usuario que le indique que debe escribir un nombre de usuario o una contraseña válidos (que no contengan caracteres inválidos).
  
+<img width="442" alt="image" src="https://github.com/user-attachments/assets/32410d4d-e0b6-4835-95dc-7c23c34a4d86">
 
 Vulnerabilidad 3 – Improper Input Validation:
 PoC
@@ -171,7 +175,8 @@ Allí podemos ver que el parámetro accounts es editable en la URL, por lo que s
 Mitigación de la vulnerabilidad:
 Lo que debemos hacer es validar que el usuario actual tenga las cuentas que tiene asignadas. Para ello, en AccountViewServlet, en el método doGet, accedemos al usuario actual e iteramos sobre la lista de cuentas asociadas a él. Si la cuenta a la que quiere acceder es una de las cuentas asociadas, entonces está en una cuenta autorizada; de lo contrario, la cuenta a la que quiere acceder no es una cuenta autorizada, por lo que hacemos que el servidor responda con un error al usuario.
 
- 
+ <img width="442" alt="image" src="https://github.com/user-attachments/assets/7ed787b5-abdc-49e4-82cd-c4ee5145ff40">
+
  
 ![image](https://github.com/user-attachments/assets/6b596c10-bde4-4350-825f-01e312b982b9)
 
