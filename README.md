@@ -48,7 +48,7 @@ Por ejemplo, un usuario malintencionado podía modificar el parámetro `acctId` 
 
 Para mitigar esta vulnerabilidad, se implementaron controles adicionales en el servlet encargado de manejar la visualización de cuentas. Ahora, cuando un usuario solicita ver el balance de una cuenta, el sistema verifica si el usuario autenticado es el propietario legítimo de la cuenta antes de permitir el acceso a la información. Esto se logra con la siguiente lógica:
 
-```java
+``` java
 // Obtain the authenticated user from the session
 User authenticatedUser = (User) request.getSession().getAttribute("user");
 if (authenticatedUser == null) {
@@ -60,9 +60,8 @@ if (authenticatedUser == null) {
 if (!isAccountOwnedByUser(authenticatedUser, Long.parseLong(accountName))) {
     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized to access this account.");
     return;
-}```
-
-Además, se implementó el método `isAccountOwnedByUser` para confirmar la propiedad de la cuenta:
+}
+```
 
 ```java
 private boolean isAccountOwnedByUser(User user, Long accountId) {
@@ -75,7 +74,10 @@ private boolean isAccountOwnedByUser(User user, Long accountId) {
         }
     }
     return false;  // The user does not own the account
-}```
+}
+```
+
+
 ![image](https://github.com/user-attachments/assets/77eaf8d8-3be8-49e5-b414-9300be89cd8c)
 ![image](https://github.com/user-attachments/assets/c342fcb3-05aa-45a3-ad39-18df3f5ac21a)
 
