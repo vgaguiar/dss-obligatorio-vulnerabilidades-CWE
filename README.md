@@ -182,7 +182,6 @@ Para mitigar esta vulnerabilidad, se implementaron controles adicionales especí
 	        %>
 ```
  
-![image](https://github.com/user-attachments/assets/6b596c10-bde4-4350-825f-01e312b982b9)
 
 (Vulnerabilidad 4 & 5)
 ![image](https://github.com/user-attachments/assets/306d88c8-f1b1-467e-b739-91e7cfa958a6)
