@@ -462,31 +462,6 @@ Con estos cambios, se garantiza que un usuario solo pueda acceder a la informaci
   
 
 
-
-## 💻 Entorno de Desarrollo
-
-Este proyecto se ejecuta en una Máquina Virtual previamente configurada para correr el software vulnerable AltoroJ. La VM está disponible para su uso con VirtualBox o UTM, lo que asegura un entorno aislado y seguro para realizar pruebas y aplicar mitigaciones de vulnerabilidades.
-
-## 🖥️ Requisitos del Sistema
-
-- [VirtualBox](https://www.virtualbox.org/) o [UTM](https://mac.getutm.app/)
-- Máquina Virtual proporcionada en la web de la asignatura
-- Navegador web para interactuar con la aplicación
-
-## ⚙️ Cómo Usar
-
-1. Descarga e importa la Máquina Virtual en tu sistema usando VirtualBox o UTM.
-2. Inicia la VM y accede a la aplicación web AltoroJ desde el navegador en la URL proporcionada.
-3. Identifica y explota cada una de las vulnerabilidades listadas.
-4. Realiza las modificaciones en el código fuente para mitigar cada vulnerabilidad.
-5. Utiliza las herramientas proporcionadas en la VM para ejecutar las pruebas y verificar que las vulnerabilidades han sido corregidas.
-
-## 📝 Notas Adicionales
-
-El propósito de esta práctica es educativo. Las técnicas y vulnerabilidades cubiertas aquí son comunes en muchas aplicaciones web, por lo que aprender a detectarlas y mitigarlas es crucial para garantizar la seguridad en el desarrollo de software.
-
-**Disclaimer:** Esta aplicación se proporciona únicamente con fines de formación. No intentes explotar vulnerabilidades en aplicaciones de producción o fuera de un entorno controlado.
-
 ## 📄 Licencia
 
 Este proyecto está destinado únicamente para fines educativos.
