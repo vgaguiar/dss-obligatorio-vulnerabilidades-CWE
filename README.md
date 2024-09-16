@@ -14,19 +14,21 @@ En la práctica, abordaremos las siguientes vulnerabilidades:
 - **Descripción:** La aplicación es vulnerable a un ataque XSS en el parámetro `query` de la URL `search.jsp`.
 - **Solución:** Aplicación de sanitización de entradas utilizando el método `ServletUtil.sanitzieHtmlWithRegex`.
 - 
-PoC
+  ### PoC
+1. Se ingresa a la máquina virtual.
+2. Levantar el servicio de Altoro desde Eclipse.
+3. Ingresar en `http://localhost:8080/AltoroJ/`.
+4. Ingresar al parámetro `query` de la URL `search.jsp`: `http://localhost:8080/AltoroJ/search.jsp?query=`.
+5. Nos damos cuenta de que al estar el parámetro `query` al descubierto en la URL, podemos ejecutar, por ejemplo, un script. Para explotar la vulnerabilidad, podemos cargar este script con código malicioso.
 
-1-Se ingresa a la maquina virtual
-2-Levantar el servicio de Altoro desde Eclipse
-3- Ingreso en  http://localhost:8080/AltoroJ/  
-4- Ingresamos al parametro query de a url search.jsp http://localhost:8080/AltoroJ/search.jsp?query=
-5- Nos damos cuenta de que al estar el parámetro query al descubierto en la URL, podemos ejecutar, por ejemplo, un script. Para explotar la vulnerabilidad, podemos cargar este script con código malicioso.
-Un ejemplo de un script básico que lance una alerta es el siguiente.
-<script> alert('Esta alerta se va a ejecutar')</script>
+   Un ejemplo de un script básico que lanza una alerta es el siguiente:
 
-Mitigación de la vulnerabilidad:
+   ```html
+   <script> alert('Esta alerta se va a ejecutar')</script>
+   
+### Mitigación de la vulnerabilidad
+Debemos sanitizar el parámetro `query` para que así no se pueda ejecutar nada dentro de él.
 
-Debemos sanitizar el parámetro query para que así no se pueda ejecutar nada dentro de él.
  
 <img width="442" alt="image" src="https://github.com/user-attachments/assets/de4b9f83-d0fc-4845-9dce-79cac857ccde">
 
@@ -34,19 +36,25 @@ Debemos sanitizar el parámetro query para que así no se pueda ejecutar nada de
 - **Descripción:** Existe una vulnerabilidad de inyección SQL en la funcionalidad de inicio de sesión.
 - **Solución:** Se modifica el código para utilizar consultas preparadas y evitar la inyección de código SQL.
 
-PoC
+### PoC
 
-1- Se ingresa a la máquina virtual
-2- Levantar el servicio de Altoro desde Eclipse
-3- Ingreso en http://localhost:8080/AltoroJ/
-4-Ingreso a la url del formulario de login: http://localhost:8080/AltoroJ/login.jsp
-5- Como vemos, podemos escribir cualquier tipo de carácter en el formulario, por lo que debemos manipular la consulta SQL para que siempre sea verdadera y así podamos loguearnos de forma satisfactoria.
-Un ejemplo de cómo podríamos realizar esto es si en el campo de usuario y contraseña escribimos lo siguiente: ' OR '1'='1.
-Si nos damos cuenta, esta consulta siempre será verdadera. La consulta que Altoro le hace a la base de datos sería algo como esto:
+1. Se ingresa a la máquina virtual.
+2. Levantar el servicio de Altoro desde Eclipse.
+3. Ingresar en `http://localhost:8080/AltoroJ/`.
+4. Ingresar a la URL del formulario de login: `http://localhost:8080/AltoroJ/login.jsp`.
+5. Como vemos, podemos escribir cualquier tipo de carácter en el formulario, por lo que debemos manipular la consulta SQL para que siempre sea verdadera y así podamos loguearnos de forma satisfactoria.  
+   Un ejemplo de cómo podríamos realizar esto es si en el campo de usuario y contraseña escribimos lo siguiente: `' OR '1'='1`.
 
-SELECT * FROM usuarios WHERE usuario = 'input' AND contraseña = 'input';
+   Si nos damos cuenta, esta consulta siempre será verdadera. La consulta que Altoro le hace a la base de datos sería algo como esto:
+
+   ```sql
+   SELECT * FROM usuarios WHERE usuario = 'input' AND contraseña = 'input';
+
 Al manipular los datos, la consulta se vería así:
+```sql
 SELECT * FROM usuarios WHERE usuario = ' ' or '1'='1' AND contraseña = ' ' or '1'='1';
+```
+
 Como tenemos un OR en los dos parámetros, siempre que se cumpla una de las dos condiciones, esto será verdadero, y ' 1'='1' siempre será verdadero.
 
 Mitigación de la vulnerabilidad:
@@ -59,12 +67,14 @@ Debemos hacer una función que básicamente verifique si el usuario está escrib
 - **Descripción:** Los usuarios autenticados pueden acceder a información sensible debido a una validación de entrada incorrecta en la funcionalidad de visualización de historial de cuenta.
 - **Solución:** Implementación de validación robusta de entrada en el código fuente.
 
-  PoC
-1- Se ingresa a la máquina virtual
-2- Levantar el servicio de Altoro desde Eclipse
-3- Ingreso en http://localhost:8080/AltoroJ/
-4-Ingreso a http://localhost:8080/AltoroJ/bank/showAccount?listAccounts=800002 , 
-Allí podemos ver que el parámetro accounts es editable en la URL, por lo que simplemente podemos cambiar el número de cuenta y acceder a la cuenta de cualquier otro usuario.
+  ### PoC
+
+1. Se ingresa a la máquina virtual.
+2. Levantar el servicio de Altoro desde Eclipse.
+3. Ingresar en `http://localhost:8080/AltoroJ/`.
+4. Ingresar a `http://localhost:8080/AltoroJ/bank/showAccount?listAccounts=800002`.  
+   Allí podemos ver que el parámetro `accounts` es editable en la URL, por lo que simplemente podemos cambiar el número de cuenta y acceder a la cuenta de cualquier otro usuario.
+
 Mitigación de la vulnerabilidad:
 Lo que debemos hacer es validar que el usuario actual tenga las cuentas que tiene asignadas. Para ello, en AccountViewServlet, en el método doGet, accedemos al usuario actual e iteramos sobre la lista de cuentas asociadas a él. Si la cuenta a la que quiere acceder es una de las cuentas asociadas, entonces está en una cuenta autorizada; de lo contrario, la cuenta a la que quiere acceder no es una cuenta autorizada, por lo que hacemos que el servidor responda con un error al usuario.
 
