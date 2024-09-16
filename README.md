@@ -86,9 +86,158 @@ Con estos cambios, se garantiza que un usuario solo pueda acceder a la informaci
 ![image](https://github.com/user-attachments/assets/3c079033-8368-44d8-8195-b08ee63f87aa)
 
 
+
 ### 8. 🔓 Missing Authentication for Critical Function
-- **Descripción:** Existe una API que permite obtener el saldo de una cuenta sin necesidad de autenticación.
-- **Solución:** Se añade autenticación obligatoria para acceder a las funciones críticas de la API.
+- **Descripción:** Existía una API que permitía obtener el saldo de una cuenta sin necesidad de autenticación.
+- **Problema Original:** La API no exigía que el usuario autenticado solo pudiera acceder a la información de sus propias cuentas. Esto permitía que cualquier persona pudiera consultar información sensible de otras cuentas.
+- **Solución:**
+
+  - **Autenticación mediante `ApiAuthFilter`:**
+    - Se modificó el filtro de autenticación (`ApiAuthFilter`) para validar los tokens de autenticación antes de acceder a la API.
+    - El filtro revisa el token y verifica que las credenciales sean correctas antes de permitir la operación solicitada.
+    - Además, se corrigió un error en el filtro que hacía doble decodificación del token, lo que provocaba problemas al validar las credenciales del usuario.
+    - **Código del `ApiAuthFilter` Corregido:**
+      ```java
+      public void filter(ContainerRequestContext requestContext) throws IOException {
+          final MultivaluedMap<String, String> headers = requestContext.getHeaders();
+          final List<String> authorization = headers.get("Authorization");
+
+          if (authorization == null || authorization.isEmpty()) {
+              requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+                  .entity("Please log in first").build());
+              return;
+          }
+
+          String encodedToken = authorization.get(0).replaceFirst("Bearer" + " ", "");
+          String accessToken = new String(Base64.decodeBase64(encodedToken));
+
+          StringTokenizer tokenizer = new StringTokenizer(accessToken, ":");
+          String username = tokenizer.nextToken();  
+          String password = tokenizer.nextToken();
+
+          // Verificar si el usuario es válido
+          try {
+              if (DBUtil.isValidUser(username, password)) {
+                  User authenticatedUser = DBUtil.getUserInfo(username);
+                  request.getSession().setAttribute("user", authenticatedUser);
+                  System.out.println("User stored in session: " + authenticatedUser.getUsername());
+              } else {
+                  requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+                      .entity("Invalid credentials").build());
+              }
+          } catch (SQLException e) {
+              requestContext.abortWith(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                  .entity("An error has occurred: " + e.getLocalizedMessage()).build());
+          }
+      }
+      ```
+
+![image](https://github.com/user-attachments/assets/8a0a2677-6906-4064-961c-e49a39b510f0)
+  - **Validación de Propiedad de Cuenta en `AccountAPI`:**
+    - La API de `AccountAPI` no validaba si el usuario autenticado era el dueño de la cuenta antes de proporcionar el saldo.
+    - **Problema Original:** El usuario podía acceder a la información de cuentas que no le pertenecían, lo que representaba un riesgo de exposición de datos.
+    - **Solución:**
+      - Se añadió una verificación para asegurar que el usuario autenticado solo pueda acceder a sus propias cuentas.
+      - El método `getAccountBalance` se modificó para obtener al usuario autenticado de la sesión y luego verificar si la cuenta pertenece a dicho usuario.
+      - **Código Corregido del `getAccountBalance`:**
+        ```java
+        @GET
+        @Path("/{accountNo}")
+        public Response getAccountBalance(@PathParam("accountNo") String accountNo,
+                                          @Context HttpServletRequest request) {
+            String response;
+            try {
+                // Obtener el usuario autenticado de la sesión
+                User currentUser = (User) request.getSession().getAttribute("user");
+
+                if (currentUser == null) {
+                    return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("{ \"Error\": \"User not authenticated.\" }")
+                        .build();
+                }
+
+                // Verificar si la cuenta pertenece al usuario autenticado
+                Account[] userAccounts = currentUser.getAccounts();
+                boolean authorized = Arrays.stream(userAccounts)
+                                           .anyMatch(account -> account.getAccountId() == Long.parseLong(accountNo));
+
+                if (!authorized) {
+                    return Response.status(Response.Status.FORBIDDEN)
+                        .entity("{ \"Error\": \"Unauthorized access to account.\" }")
+                        .build();
+                }
+
+                // Obtener el balance de la cuenta
+                double dblBalance = Account.getAccount(accountNo).getBalance();
+                String format = (dblBalance < 1) ? "$0.00" : "$.00";
+                String balance = new DecimalFormat(format).format(dblBalance);
+                response = "{\"balance\" : \"" + balance + "\" ,\n";
+
+            } catch (Exception e) {
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{Error : " + e.getLocalizedMessage())
+                    .build();
+            }
+
+            return Response.status(Response.Status.OK).entity(response).build();
+        }
+        ```
+![image](https://github.com/user-attachments/assets/6eee6c90-1bc2-45c9-a2d1-d7bbc4f5cfd2)
+
+   - 💉 **Prevención de Inyección SQL en `isValidUser`:**
+        - **Descripción:** El método `isValidUser` contenía una vulnerabilidad de inyección SQL.
+        - **Problema Original:** Las entradas de usuario y contraseña se concatenaban directamente en la consulta SQL, lo cual permitía inyecciones SQL.
+        - **Solución:** 
+          - Se modificó el método `isValidUser` para usar consultas preparadas, lo que evita que los datos de entrada se interpreten como parte de la consulta SQL.
+          - **Código Corregido:**
+            ```java
+            public static boolean isValidUser(String user, String password) throws SQLException {
+                String query = "SELECT COUNT(*) FROM PEOPLE WHERE USER_ID = ? AND PASSWORD = ?";
+                try (Connection connection = getConnection();
+                     PreparedStatement statement = connection.prepareStatement(query)) {
+                    
+                    statement.setString(1, user);
+                    statement.setString(2, password);
+                    
+                    try (ResultSet resultSet = statement.executeQuery()) {
+                        if (resultSet.next()) {
+                            return resultSet.getInt(1) > 0;
+                        }
+                    }
+                }
+                return false;
+            }
+            ```
+            ![image](https://github.com/user-attachments/assets/0ce5ceec-a69b-421d-96a9-92f428e720d5)
+
+
+
+#### 🧪 Proceso de Prueba del Token de Autenticación
+- **Generación del Token:**
+  - Usamos el siguiente comando en la consola para generar un token codificado en base64 con las credenciales `jsmith:demo1234`.
+  - **Comando**:
+    ```bash
+    echo -n 'jsmith:demo1234' | base64
+    ```
+    Resultado: `anNtaXRoOmRlbW8xMjM0`
+
+- **Prueba del Token con cURL:**
+  - Usamos `curl` para realizar una petición a la API utilizando el token generado.
+  - **Comando de cURL**:
+    ```bash
+    curl -H "Authorization: Bearer anNtaXRoOmRlbW8xMjM0" http://localhost:8080/AltoroJ/api/account/800002
+    ```
+- **Verificación Exitosa (Intentando acceder a la información de la cuenta de un usuario que NO es el logueado:**
+  - La solicitud pasó a través del filtro de autenticación (`ApiAuthFilter`), validando correctamente el token y evitando que se acceda a la infromación de una cuenta que no pertenece al usuario logueado.
+    ![image](https://github.com/user-attachments/assets/e4ba85b8-b0c3-4db4-b336-15b40f407e8d)
+
+    
+- **Verificación Exitosa (Intentando acceder a una cuenta que pertenece al usuario logueado):**
+  - La solicitud pasó a través del filtro de autenticación (`ApiAuthFilter`), validando correctamente el token y permitiendo el acceso a la información de la cuenta del usuario logueado.
+    ![image](https://github.com/user-attachments/assets/a1aa9028-b022-4873-98dd-7dc7368c0661)
+  
+
+
 
 ## 💻 Entorno de Desarrollo
 
