@@ -24,15 +24,179 @@ En la práctica, abordaremos las siguientes vulnerabilidades:
 
 ### 4. 🖱️ OS Command Injection
 - **Descripción:** El parámetro `content` de la página `index.jsp` permite la ejecución de comandos del sistema operativo.
-- **Solución:** Se neutralizan las entradas maliciosas que podrían ser ejecutadas como comandos del sistema.
 
+#### PoC
+1.	Se ingresa a la máquina virtual
+2.	Levantar el servicio de Altoro desde Eclipse
+3.	Ingreso en http://localhost:8080/AltoroJ/
+4.	Ingreso en http://localhost:8080/AltoroJ/index.jsp?content=personal_deposit.htm
+5.	Ingreso al final de la dirección “ ';ls' ” quedando tal que localhost:8080/AltoroJ/index.jsp?content=personal_deposit.htm';ls'
+
+#### **Desarrollo de la Vulnerabilidad**
+
+**Problema Original:**
+
+Antes de implementar la corrección, el content estaba vulnerable ante factores de inserciones de OS command, permitiendo ejecutar una amplia variedad de comandos del sistema operativo en cuestión.
+
+Por ejemplo, un atacante podría hacer un ;ls y visualizar todos los directorios y archivos en la ubicación actual
+
+**Solución Aplicada:**
+
+Para mitigar esta vulnerabilidad, se implementaron controles adicionales específicos evitando de esta manera el uso ";" además de sanitizar la entrada.
+
+``` java
+		<%		
+		java.lang.String content = request.getParameter("content");
+		if (content == null)
+			content = "default.htm";
+		else
+			content = request.getParameter("content");
+		
+		if (ServletUtil.isAppPropertyTrue("advancedStaticPageProcessing")){
+			String path  = request.getSession().getServletContext().getRealPath("/static");
+
+	        %>
+```
+
+``` java
+		<%		
+		java.lang.String content = request.getParameter("content");
+		if (content == null)
+			content = "default.htm";
+		else
+			content = content.replace(";", "");
+            content = ServletUtil.sanitzieHtmlWithRegex(content);
+		
+		if (ServletUtil.isAppPropertyTrue("advancedStaticPageProcessing")){
+			String path  = request.getSession().getServletContext().getRealPath("/static");
+
+	        %>
+```
 ### 5. 🗂️ Path Traversal
 - **Descripción:** El mismo parámetro `content` de la página `index.jsp` es vulnerable a ataques de Path Traversal, permitiendo al atacante acceder a archivos fuera del directorio autorizado.
-- **Solución:** Se implementan restricciones de acceso a archivos para mitigar esta vulnerabilidad.
+
+#### PoC
+1.	Se ingresa a la máquina virtual
+2.	Levantar el servicio de Altoro desde Eclipse
+3.	Ingreso en http://localhost:8080/AltoroJ/
+4.	Ingreso en http://localhost:8080/AltoroJ/index.jsp?content=personal_deposit.htm
+5.	Ingreso al final de la dirección “ ';cd ../../../../../../../../../../../../etc;ls' ”quedando tal que localhost:8080/AltoroJ/index.jsp?content=personal_deposit.htm ';cd ../../../../../../../../../../../../etc;ls'
+
+#### **Desarrollo de la Vulnerabilidad**
+
+**Problema Original:**
+
+Antes de implementar la corrección, el content estaba vulnerable ante factores de inserciones de comandos de movimiento entre directorios, permitiendo acceder a archivos y directorios privados.
+
+Por ejemplo, un atacante podría hacer un ../ de manera arbitraria hasta llegar a la raíz del sistema y de ahí a acceder a directorios tales como etc.
+
+**Solución Aplicada:**
+
+Para mitigar esta vulnerabilidad, se implementaron controles adicionales específicos evitando de esta manera el uso ../ además de sanitizar la entrada.
+
+``` java
+		<%		
+		java.lang.String content = request.getParameter("content");
+		if (content == null)
+			content = "default.htm";
+		else
+			content = request.getParameter("content");
+		
+		if (ServletUtil.isAppPropertyTrue("advancedStaticPageProcessing")){
+			String path  = request.getSession().getServletContext().getRealPath("/static");
+
+	        %>
+```
+
+``` java
+		<%		
+		java.lang.String content = request.getParameter("content");
+		if (content == null)
+			content = "default.htm";
+		else
+			content = content.replace("../", "");
+            content = ServletUtil.sanitzieHtmlWithRegex(content);
+		
+		if (ServletUtil.isAppPropertyTrue("advancedStaticPageProcessing")){
+			String path  = request.getSession().getServletContext().getRealPath("/static");
+
+	        %>
+```
+
+(Vulnerabilidad 4 & 5)
+![image](https://github.com/user-attachments/assets/306d88c8-f1b1-467e-b739-91e7cfa958a6)
+
 
 ### 6. 🔐 Use of Hard-coded Credentials
 - **Descripción:** La interfaz de administración (`/AltoroJ/admin/login.jsp`) utiliza credenciales codificadas directamente en el código fuente.
-- **Solución:** Las credenciales se extraen a un archivo de configuración externo (`app.properties`) para evitar su exposición en el código fuente.
+- **Solución:** Las credenciales se extraen a un archivo de configuración externo (`credenciales.properties`) para evitar su exposición en el código fuente.
+
+#### PoC
+1.	Se ingresa a la máquina virtual
+2.	Levantar el servicio de Altoro desde Eclipse
+3.	Ingreso en http://localhost:8080/AltoroJ/
+4.	Ingreso a la dirección http://localhost:8080/AltoroJ/index.jsp?content=personal_loans.htm%27;cd%20git/AltoroJ/src/com/ibm/security/appscan/altoromutual/util/;%20cat%20ServletUtil.java%27 
+Este rejunte de Path Traversal y OS Command Injection nos permite acceso a las credenciales hard-coded y poder acceder a ellas.
+![image](https://github.com/user-attachments/assets/9318f8ac-f87b-41c4-8383-b65c57a0eb0a)
+
+
+#### **Desarrollo de la Vulnerabilidad**
+
+**Problema Original:**
+
+Antes de implementar la corrección, Un atacante podía a través de otras vulnerabilidades en el sistema acceder a datos sensibles hard-coded, en este caso especifico a credenciales en el archivo servletUtils.java.
+
+**Solución Aplicada:**
+
+Para mitigar esta vulnerabilidad, se pueden recolocar estas credenciales al archivo credenciales.properties creado como hermano del archivo ServletUtil.java (aunque un caso mas idóneo sería el no ser ubicando en ningún sito accesible sino que activarlo mediante Docker por ejemplo). En esta solución obtenemos las credenciales de un archivo y no están directamente Hard-coded en el mismo archivo.
+
+``` java
+public class ServletUtil {
+
+	public static final String SESSION_ATTR_USER = "user";
+	public static final String SESSION_ATTR_ADMIN_VALUE = "altoroadmin";
+	public static final String SESSION_ATTR_ADMIN_KEY = "admin";
+
+```
+
+``` java
+import java.util.Properties;
+...
+
+public class ServletUtil {
+
+    public static final String SESSION_ATTR_USER = "user";
+    public static final String SESSION_ATTR_ADMIN_VALUE;
+    public static final String SESSION_ATTR_ADMIN_KEY;
+    
+    static {
+        Properties props = new Properties();
+        InputStream input = ServletUtil.class.getClassLoader().getResourceAsStream("credenciales.properties");
+        
+        if (input != null) {
+            loadProperties(props, input);
+        }
+        SESSION_ATTR_ADMIN_VALUE = props.getProperty("admin.username");
+        SESSION_ATTR_ADMIN_KEY = props.getProperty("admin.password");
+    }
+
+    private static void loadProperties(Properties props, InputStream input) {
+        try {
+            props.load(input);
+        } catch (Exception e) {
+            props.setProperty("admin.username", "default_admin_value");
+            props.setProperty("admin.password", "default_admin_password");
+        }
+    }
+```
+  
+``` java
+#credenciales
+
+admin.username=altoroadmin
+admin.password=admin
+```
+
 
 ### 7. 🚫 Missing Authorization
 - **Descripción:** Los usuarios autenticados pueden acceder a información de cuentas que no les pertenecen.
