@@ -75,8 +75,9 @@ Debemos hacer una función que básicamente verifique si el usuario está escrib
 4. Ingresar a `http://localhost:8080/AltoroJ/bank/showAccount?listAccounts=800002`.  
    Allí podemos ver que el parámetro `accounts` es editable en la URL, por lo que simplemente podemos cambiar el número de cuenta y acceder a la cuenta de cualquier otro usuario.
 
-Mitigación de la vulnerabilidad:
-Lo que debemos hacer es validar que el usuario actual tenga las cuentas que tiene asignadas. Para ello, en AccountViewServlet, en el método doGet, accedemos al usuario actual e iteramos sobre la lista de cuentas asociadas a él. Si la cuenta a la que quiere acceder es una de las cuentas asociadas, entonces está en una cuenta autorizada; de lo contrario, la cuenta a la que quiere acceder no es una cuenta autorizada, por lo que hacemos que el servidor responda con un error al usuario.
+### Mitigación de la vulnerabilidad
+
+Lo que debemos hacer es validar que el usuario actual tenga las cuentas que tiene asignadas. Para ello, en `AccountViewServlet`, en el método `doGet`, accedemos al usuario actual e iteramos sobre la lista de cuentas asociadas a él. Si la cuenta a la que quiere acceder es una de las cuentas asociadas, entonces está en una cuenta autorizada; de lo contrario, la cuenta a la que quiere acceder no es una cuenta autorizada, por lo que hacemos que el servidor responda con un error al usuario.
 
  <img width="442" alt="image" src="https://github.com/user-attachments/assets/7ed787b5-abdc-49e4-82cd-c4ee5145ff40">
 
